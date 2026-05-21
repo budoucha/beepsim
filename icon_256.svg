@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- BeepSketch favicon — pixel bee 8x8 grid @ 4x scale -->
+  <!-- black=#404040(64), white=#d8d8d8(216), yellow=#FFD600, bg=transparent -->
+  <!-- row 1: col 3,4,5 = yellow -->
+  <rect x="96" y="32"  width="32" height="32" fill="#FFD600"/>
+  <rect x="128" y="32"  width="32" height="32" fill="#FFD600"/>
+  <rect x="160" y="32"  width="32" height="32" fill="#FFD600"/>
+  <!-- row 2: col 2=Y, 3=K, 4=Y, 5=K, 6=Y -->
+  <rect x="64"  y="64"  width="32" height="32" fill="#FFD600"/>
+  <rect x="96" y="64"  width="32" height="32" fill="#404040"/>
+  <rect x="128" y="64"  width="32" height="32" fill="#FFD600"/>
+  <rect x="160" y="64"  width="32" height="32" fill="#404040"/>
+  <rect x="192" y="64"  width="32" height="32" fill="#FFD600"/>
+  <!-- row 3: col 2,3,4,5,6 = yellow -->
+  <rect x="64"  y="96" width="32" height="32" fill="#FFD600"/>
+  <rect x="96" y="96" width="32" height="32" fill="#FFD600"/>
+  <rect x="128" y="96" width="32" height="32" fill="#FFD600"/>
+  <rect x="160" y="96" width="32" height="32" fill="#FFD600"/>
+  <rect x="192" y="96" width="32" height="32" fill="#FFD600"/>
+  <!-- row 4: col 1,2=white, 3,4,5=black, 6,7=white -->
+  <rect x="32"  y="128" width="32" height="32" fill="#d8d8d8"/>
+  <rect x="64"  y="128" width="32" height="32" fill="#d8d8d8"/>
+  <rect x="96" y="128" width="32" height="32" fill="#404040"/>
+  <rect x="128" y="128" width="32" height="32" fill="#404040"/>
+  <rect x="160" y="128" width="32" height="32" fill="#404040"/>
+  <rect x="192" y="128" width="32" height="32" fill="#d8d8d8"/>
+  <rect x="224" y="128" width="32" height="32" fill="#d8d8d8"/>
+  <!-- row 5: col 2=white, 3,4,5=yellow, 6=white -->
+  <rect x="64"  y="160" width="32" height="32" fill="#d8d8d8"/>
+  <rect x="96" y="160" width="32" height="32" fill="#FFD600"/>
+  <rect x="128" y="160" width="32" height="32" fill="#FFD600"/>
+  <rect x="160" y="160" width="32" height="32" fill="#FFD600"/>
+  <rect x="192" y="160" width="32" height="32" fill="#d8d8d8"/>
+  <!-- row 6: col 4,5 = black -->
+  <rect x="128" y="192" width="32" height="32" fill="#404040"/>
+  <rect x="160" y="192" width="32" height="32" fill="#404040"/>
+  <!-- row 7: col 5 = yellow -->
+  <rect x="160" y="224" width="32" height="32" fill="#FFD600"/>
+</svg>
