@@ -1,12 +1,7 @@
 # BeepSim
 
-`~/devel/beepsim/index.html` に全機能が入った単一HTMLファイルのアプリ。
-サーバー不要、ブラウザで直接開いて使う（file://）。
-
-## 概要
-
-PowerShell の `[console]::beep(Hz, ms)` コマンドを視覚的に組み立てるツール。
-ブラウザ上（Web Audio API）で試聴しながら、コマンドをコピーして実際に鳴らす用途。
+`index.html` に全機能が入った単一HTMLファイルのアプリ。
+サーバー不要、ブラウザで直接開いて使う（file://）。GitHubPages でも公開中。
 
 ## 技術スタック
 
@@ -19,7 +14,25 @@ PowerShell の `[console]::beep(Hz, ms)` コマンドを視覚的に組み立て
 
 状態は `rows` 配列で管理。各rowは `{ id, hz, ms }` を持つ。
 `renderRows()` が唯一のDOM再構築関数で、変更のたびに全行を再描画する。
-`updatePreview()` がPreviewのHTML生成とlocalSave両方をトリガーする。
+`updatePreview()` は起動時に `saveState()` を含むようラップされる（`updatePreview = function() { _updatePreview(); saveState(); }`）。
+状態の保存は `saveState()`、読み込みは `loadState()` が担当。
+
+## 対応プラットフォーム
+
+タブ切り替えで3プラットフォームのコマンドを生成する。`currentTab` が現在のタブを保持。
+
+| タブ | コマンド形式 | 依存 |
+|---|---|---|
+| PowerShell | `[console]::beep(Hz, ms)` | Windows標準 |
+| macOS | `play -n synth {秒} square {Hz}` | sox（`brew install sox`） |
+| Linux | `beep -f {Hz} -l {ms}` | beep（`apt install beep`） |
+
+スリープ行（Hz欄が空）の変換：
+- PowerShell → `Start-Sleep -Milliseconds ms`
+- macOS → `sleep {秒}`
+- Linux → `sleep {秒}`
+
+インポート機能（テキストペースト）で3形式すべてを自動判別して読み込める。
 
 ## PowerShellコマンドの仕様
 
@@ -32,10 +45,6 @@ PowerShell の `[console]::beep(Hz, ms)` コマンドを視覚的に組み立て
 BT接続の遅延（数百ms）により短いビープが聞こえない問題がある。
 対策として、本番音の前に**37Hz（最低周波数）で長めのダミービープ**を入れて
 イヤホンを起こしてから鳴らす。
-
-```powershell
-[console]::beep(37, 700); [console]::beep(1047, 480); [console]::beep(660, 180); [console]::beep(1047, 180)
-```
 
 - `37Hz` = 人間にはほぼ聞こえない疑似無音として使用
 - ビープとビープの間の `Start-Sleep` をそのまま使うとBTが切れて次の音が聞こえなくなる
