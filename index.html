@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeepSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f12;
+      --surface: #13161b;
+      --surface2: #1a1e25;
+      --border: #252a34;
+      --border-bright: #2e3440;
+      --accent: #f0a500;
+      --accent-dim: #7a5200;
+      --accent-glow: rgba(240,165,0,0.15);
+      --cyan: #00c8d4;
+      --cyan-dim: #005a60;
+      --text: #c8cdd6;
+      --text-dim: #5a6070;
+      --text-bright: #e8ecf2;
+      --danger: #e05050;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Zen Kaku Gothic New', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 80px;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Ambient glow top */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(240,165,0,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 28px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 20px rgba(240,165,0,0.4);
+    }
+
+    .logo-sub {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* Options bar */
+    .options-bar {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .option-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .option-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* Custom checkbox */
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-wrap input[type="checkbox"] {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--border-bright);
+      border-radius: 3px;
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .checkbox-wrap input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox-wrap input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #000;
+      font-family: var(--mono);
+    }
+
+    .checkbox-wrap .checkbox-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: 0.05em;
+    }
+
+    /* Gap input */
+    .gap-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gap-input {
+      width: 72px;
+      background: var(--bg);
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 4px 8px;
+      text-align: left;
+      outline: none;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+
+    .gap-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .gap-input:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .option-group.disabled .option-label {
+      opacity: 0.3;
+    }
+
+    .option-group.disabled .gap-unit {
+      opacity: 0.3;
+    }
+
+    .gap-unit {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Column headers */
+    .col-headers {
+      display: grid;
+      grid-template-columns: 18px 32px 1fr 1fr 40px;
+      gap: 8px;
+      padding: 0 4px 8px;
+      margin-bottom: 2px;
+    }
+
+    .col-header {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+
+    .col-header:nth-child(3) { padding-left: 12px; }
+    .col-header:nth-child(4) { padding-left: 12px; }
+
+    /* Rows */
+    .rows-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .beep-row {
+      display: grid;
+      grid-template-columns: 18px 32px 1fr 1fr 40px;
+      gap: 8px;
+      align-items: center;
+      animation: rowIn 0.2s ease;
+      transition: opacity 0.15s;
+    }
+
+    .beep-row.dragging {
+      opacity: 0.3;
+    }
+
+    .beep-row.drag-over-top {
+      box-shadow: 0 -2px 0 var(--accent);
+      border-radius: 0;
+    }
+
+    .beep-row.drag-over-bottom {
+      box-shadow: 0 2px 0 var(--accent);
+      border-radius: 0;
+    }
+
+    /* Drag handle */
+    .drag-handle {
+      color: var(--text-dim);
+      font-size: 14px;
+      cursor: grab;
+      text-align: center;
+      line-height: 1;
+      padding: 2px 0;
+      opacity: 0.4;
+      transition: opacity 0.15s, color 0.15s;
+      user-select: none;
+    }
+
+    .beep-row:hover .drag-handle {
+      opacity: 1;
+      color: var(--text);
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .row-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .row-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-bright);
+      font-family: var(--mono);
+      font-size: 15px;
+      padding: 10px 14px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      letter-spacing: 0.03em;
+    }
+
+    .row-input::placeholder {
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .row-input:focus {
+      border-color: var(--accent);
+      background: var(--surface2);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    /* Sleep row styling */
+    .beep-row.is-sleep .row-input.freq-input {
+      color: var(--cyan);
+    }
+
+    .beep-row.is-sleep .row-input.freq-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(0,200,212,0.12);
+    }
+
+    .freq-wrap {
+      position: relative;
+    }
+
+    /* Delete button */
+    .beep-row .btn-wrap {
+      flex-shrink: 0;
+    }
+
+    .delete-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+
+    .delete-btn:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+      background: rgba(224,80,80,0.08);
+    }
+
+    /* Action row */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      padding: 11px 22px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-play {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(240,165,0,0.3);
+    }
+
+    .btn-play:hover {
+      background: #ffb800;
+      box-shadow: 0 0 30px rgba(240,165,0,0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-play:active {
+      transform: translateY(0);
+    }
+
+    .btn-play.playing {
+      background: #e05050;
+      box-shadow: 0 0 20px rgba(224,80,80,0.4);
+      animation: pulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(224,80,80,0.4); }
+      50% { box-shadow: 0 0 40px rgba(224,80,80,0.7); }
+    }
+
+    .btn-add {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border-bright);
+    }
+
+    .btn-add:hover {
+      background: var(--surface2);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .btn-reset {
+      background: var(--surface);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      margin-left: auto;
+    }
+
+    .btn-reset:hover {
+      background: rgba(224,80,80,0.08);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* Tooltip */
+    .btn-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e2430;
+      border: 1px solid var(--border-bright);
+      border-radius: 5px;
+      padding: 5px 10px;
+      white-space: nowrap;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 100;
+    }
+
+    .tooltip kbd {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-bottom-width: 2px;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      margin-left: 5px;
+    }
+
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--border-bright);
+    }
+
+    .btn-wrap:hover .tooltip {
+      opacity: 1;
+    }
+
+    /* PowerShell preview */
+    .ps-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .ps-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ps-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tab switcher */
+    .ps-tabs {
+      display: flex;
+      gap: 2px;
+    }
+
+    .ps-tab {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      padding: 5px 12px;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .ps-tab:hover {
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .ps-tab.active {
+      color: var(--accent);
+      background: var(--bg);
+      border-color: var(--border-bright);
+    }
+
+    .ps-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      padding: 5px 20px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+    }
+
+    .ps-flag { color: var(--text-dim); }
+
+    .copy-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      padding: 5px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .copy-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      border-color: #50c878;
+      color: #50c878;
+    }
+
+    .ps-body {
+      padding: 16px 20px;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+    }
+
+    .ps-code {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: #c8d0e0;
+      line-height: 1.7;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .ps-cmd { color: #79b8ff; }
+    .ps-freq { color: var(--accent); }
+    .ps-dur { color: #b8e994; }
+    .ps-sleep { color: var(--cyan); }
+    .ps-sep { color: var(--text-dim); }
+
+    /* Import section */
+    .import-section {
+      margin-top: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .import-header {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #import-input {
+      width: 100%;
+      background: var(--surface2);
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 12px 16px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      line-height: 1.6;
+      display: block;
+    }
+
+    #import-input:focus {
+      background: var(--bg);
+      border-bottom-color: var(--accent);
+    }
+
+    #import-input::placeholder {
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+
+    .import-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+    }
+
+    .import-btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      padding: 7px 16px;
+      background: var(--bg);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .import-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .import-error {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--danger);
+      letter-spacing: 0.03em;
+    }
+
+    /* Progress indicator */
+    .progress-bar {
+      height: 2px;
+      background: var(--border);
+      margin: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px var(--accent);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">BeepSim</div>
+    <div class="logo-sub">Console Beep Sequencer</div>
+  </header>
+
+  <div class="options-bar">
+    <label class="checkbox-wrap">
+      <input type="checkbox" id="disableGap">
+      <span class="checkbox-text">ビープ間隔を使わない</span>
+    </label>
+    <div class="option-group">
+      <span class="option-label">ビープ間隔</span>
+      <div class="gap-input-wrap">
+        <input type="number" class="gap-input" id="gapMs" value="50" min="0" max="9999">
+        <span class="gap-unit">ms</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-headers">
+    <div class="col-header"></div>
+    <div class="col-header"></div>
+    <div class="col-header">周波数 (Hz)</div>
+    <div class="col-header">長さ (ms)</div>
+    <div class="col-header"></div>
+  </div>
+
+  <div class="rows-container" id="rowsContainer"></div>
+
+  <div class="actions">
+    <div class="btn-wrap">
+      <button class="btn btn-play" id="playBtn" onclick="togglePlay()">
+        <span id="playIcon">▶</span>
+        <span id="playLabel">音を鳴らす</span>
+      </button>
+      <div class="tooltip">再生 / 停止<kbd>Ctrl+Enter</kbd></div>
+    </div>
+    <div class="btn-wrap">
+      <button class="btn btn-add" onclick="addRow()">＋ 追加</button>
+      <div class="tooltip">行を追加<kbd>Alt+N</kbd></div>
+    </div>
+    <div class="btn-wrap">
+      <button class="btn btn-reset" onclick="resetRows()">✕ リセット</button>
+      <div class="tooltip">全消去</div>
+    </div>
+  </div>
+
+  <div class="ps-panel">
+    <div class="ps-header">
+      <div class="ps-tabs">
+        <button class="ps-tab active" data-tab="ps" onclick="switchTab('ps')">PowerShell</button>
+        <button class="ps-tab" data-tab="mac" onclick="switchTab('mac')">macOS</button>
+        <button class="ps-tab" data-tab="linux" onclick="switchTab('linux')">Linux</button>
+      </div>
+      <button class="copy-btn" id="copyBtn" onclick="copyCommand()">
+        <span>コピー</span>
+      </button>
+    </div>
+    <div class="ps-hint" id="psHint" style="display:none"></div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="ps-body">
+      <div class="ps-code" id="psPreview"></div>
+    </div>
+  </div>
+
+  <div class="import-section">
+    <div class="import-header">コマンドを貼り付けて読み込む</div>
+    <textarea id="import-input" placeholder="[console]::beep(1047, 480); [console]::beep(660, 180); ...&#10;play -n synth 0.480 square 1047; ...&#10;beep -f 1047 -l 480; ..."></textarea>
+    <div class="import-actions">
+      <button class="import-btn" id="importBtn">読み込む</button>
+      <span class="import-error" id="importError"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let rows = [];
+  let rowId = 0;
+  let isPlaying = false;
+  let stopFlag = false;
+  let audioCtx = null;
+  let dragSrcId = null;
+  let lastFocusedRowId = null;
+  let currentTab = 'ps';
+
+  const TAB_HINTS = {
+    ps:    null,
+    mac:   '# brew install sox',
+    linux: '# apt install beep',
+  };
+
+  function formatSec(ms) {
+    return (ms / 1000).toFixed(3);
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.ps-tab').forEach(el => {
+      el.classList.toggle('active', el.dataset.tab === tab);
+    });
+    const hint = document.getElementById('psHint');
+    const hintText = TAB_HINTS[tab];
+    if (hintText) {
+      hint.textContent = hintText;
+      hint.style.display = '';
+    } else {
+      hint.style.display = 'none';
+    }
+    updatePreview();
+    saveState();
+  }
+
+  function getAudioCtx() {
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  function addRow(hz = '', ms = '') {
+    const id = rowId++;
+    const idx = lastFocusedRowId != null
+      ? rows.findIndex(r => r.id === lastFocusedRowId) + 1
+      : rows.length;
+    rows.splice(idx < 0 ? rows.length : idx, 0, { id, hz, ms });
+    renderRows();
+    updatePreview();
+    // 新しく追加した行の最初のinputにフォーカス
+    const newRow = document.querySelector(`[data-row-id="${id}"]`);
+    if (newRow) newRow.querySelector('input').focus();
+  }
+
+  function removeRow(id) {
+    rows = rows.filter(r => r.id !== id);
+    renderRows();
+    updatePreview();
+  }
+
+  function updateRow(id, field, value) {
+    const row = rows.find(r => r.id === id);
+    if (row) {
+      row[field] = value;
+      updatePreview();
+      // Update sleep styling
+      const rowEl = document.querySelector(`[data-row-id="${id}"]`);
+      if (rowEl) {
+        const isSleep = !row.hz.trim();
+        rowEl.classList.toggle('is-sleep', isSleep);
+      }
+    }
+  }
+
+  function renderRows() {
+    const container = document.getElementById('rowsContainer');
+    container.innerHTML = '';
+    rows.forEach((row, idx) => {
+      const isSleep = !row.hz.trim();
+      const div = document.createElement('div');
+      div.className = `beep-row${isSleep ? ' is-sleep' : ''}`;
+      div.dataset.rowId = row.id;
+      div.draggable = true;
+      div.innerHTML = `
+        <div class="drag-handle" title="ドラッグで並び替え">⠿</div>
+        <div class="row-num">${String(idx + 1).padStart(2, '0')}</div>
+        <div class="freq-wrap">
+          <input
+            class="row-input freq-input"
+            type="number"
+            min="37" max="32767"
+            placeholder="空欄 = sleep"
+            value="${row.hz}"
+            oninput="updateRow(${row.id}, 'hz', this.value)"
+          >
+        </div>
+        <input
+          class="row-input"
+          type="number"
+          min="1"
+          placeholder="ms"
+          value="${row.ms}"
+          oninput="updateRow(${row.id}, 'ms', this.value)"
+        >
+        <div class="btn-wrap">
+          <button class="delete-btn" onclick="removeRow(${row.id})">×</button>
+          <div class="tooltip">この行を削除<kbd>Alt+Delete</kbd></div>
+        </div>
+      `;
+
+      // Drag events
+      div.addEventListener('dragstart', e => {
+        dragSrcId = row.id;
+        div.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      div.addEventListener('dragend', () => {
+        div.classList.remove('dragging');
+        document.querySelectorAll('.beep-row').forEach(el => {
+          el.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+      });
+      div.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.beep-row').forEach(el => {
+          el.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+        const rect = div.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        div.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+      });
+      div.addEventListener('dragleave', () => {
+        div.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+      div.addEventListener('drop', e => {
+        e.preventDefault();
+        if (dragSrcId === row.id) return;
+        const rect = div.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        const insertBefore = e.clientY < mid;
+        const srcIdx = rows.findIndex(r => r.id === dragSrcId);
+        const dstIdx = rows.findIndex(r => r.id === row.id);
+        const [moved] = rows.splice(srcIdx, 1);
+        const newDst = rows.findIndex(r => r.id === row.id);
+        rows.splice(insertBefore ? newDst : newDst + 1, 0, moved);
+        renderRows();
+        updatePreview();
+      });
+
+      // Input fields should not trigger drag
+      div.querySelectorAll('input').forEach(input => {
+        input.addEventListener('mousedown', e => e.stopPropagation());
+        input.addEventListener('focus', () => { lastFocusedRowId = row.id; });
+      });
+
+      container.appendChild(div);
+    });
+  }
+
+  function buildSequence() {
+    const gapMs = parseInt(document.getElementById('gapMs').value) || 0;
+    const disableGap = document.getElementById('disableGap').checked;
+    const seq = [];
+    rows.forEach((row, idx) => {
+      const hz = row.hz.trim();
+      const ms = parseInt(row.ms) || 0;
+      if (ms <= 0) return;
+      if (hz === '') {
+        seq.push({ type: 'sleep', ms });
+      } else {
+        seq.push({ type: 'beep', hz: parseInt(hz), ms });
+      }
+      // Add gap after each item except last
+      if (!disableGap && gapMs > 0 && idx < rows.length - 1) {
+        seq.push({ type: 'gap', ms: gapMs });
+      }
+    });
+    return seq;
+  }
+
+  function buildHtmlParts(tab) {
+    const parts = [];
+    rows.forEach((row) => {
+      const hz = row.hz.trim();
+      const ms = parseInt(row.ms) || 0;
+      if (ms <= 0) return;
+      if (tab === 'ps') {
+        if (hz === '') {
+          parts.push(`<span class="ps-sleep">Start-Sleep</span> <span class="ps-cmd">-Milliseconds</span> <span class="ps-dur">${ms}</span>`);
+        } else {
+          parts.push(`<span class="ps-cmd">[console]::beep</span>(<span class="ps-freq">${hz}</span>, <span class="ps-dur">${ms}</span>)`);
+        }
+      } else if (tab === 'mac') {
+        if (hz === '') {
+          parts.push(`<span class="ps-sleep">sleep</span> <span class="ps-dur">${formatSec(ms)}</span>`);
+        } else {
+          parts.push(`<span class="ps-cmd">play</span> <span class="ps-flag">-n synth</span> <span class="ps-dur">${formatSec(ms)}</span> <span class="ps-flag">square</span> <span class="ps-freq">${hz}</span>`);
+        }
+      } else if (tab === 'linux') {
+        if (hz === '') {
+          parts.push(`<span class="ps-sleep">sleep</span> <span class="ps-dur">${formatSec(ms)}</span>`);
+        } else {
+          parts.push(`<span class="ps-cmd">beep</span> <span class="ps-flag">-f</span> <span class="ps-freq">${hz}</span> <span class="ps-flag">-l</span> <span class="ps-dur">${ms}</span>`);
+        }
+      }
+    });
+    return parts;
+  }
+
+  function updatePreview() {
+    const seq = buildSequence();
+    const el = document.getElementById('psPreview');
+
+    if (seq.length === 0) {
+      el.innerHTML = '<span style="color:var(--text-dim)">// シーケンスが空です</span>';
+      return;
+    }
+
+    const parts = buildHtmlParts(currentTab);
+    el.innerHTML = parts.join(`<span class="ps-sep">; </span>`);
+  }
+
+  function getPlainCommand() {
+    const parts = [];
+    rows.forEach((row) => {
+      const hz = row.hz.trim();
+      const ms = parseInt(row.ms) || 0;
+      if (ms <= 0) return;
+      if (currentTab === 'ps') {
+        if (hz === '') parts.push(`Start-Sleep -Milliseconds ${ms}`);
+        else parts.push(`[console]::beep(${hz}, ${ms})`);
+      } else if (currentTab === 'mac') {
+        if (hz === '') parts.push(`sleep ${formatSec(ms)}`);
+        else parts.push(`play -n synth ${formatSec(ms)} square ${hz}`);
+      } else if (currentTab === 'linux') {
+        if (hz === '') parts.push(`sleep ${formatSec(ms)}`);
+        else parts.push(`beep -f ${hz} -l ${ms}`);
+      }
+    });
+    return parts.join('; ');
+  }
+
+  async function playSequence(seq) {
+    const ctx = getAudioCtx();
+    const progressFill = document.getElementById('progressFill');
+    const totalMs = seq.reduce((s, item) => s + item.ms, 0);
+    let elapsed = 0;
+
+    for (const item of seq) {
+      if (stopFlag) break;
+      if (item.type === 'beep') {
+        await playBeep(ctx, item.hz, item.ms);
+      } else {
+        // sleep or gap
+        await new Promise(r => {
+          const start = Date.now();
+          const check = () => {
+            if (stopFlag) { r(); return; }
+            if (Date.now() - start >= item.ms) { r(); return; }
+            requestAnimationFrame(check);
+          };
+          check();
+        });
+      }
+      elapsed += item.ms;
+      progressFill.style.width = `${Math.min(100, (elapsed / totalMs) * 100)}%`;
+    }
+    progressFill.style.width = '0%';
+  }
+
+  function playBeep(ctx, freq, durationMs) {
+    return new Promise(resolve => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      // Envelope: slight fade in/out to avoid clicks
+      const dur = durationMs / 1000;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + Math.min(0.005, dur * 0.1));
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + dur - Math.min(0.01, dur * 0.1));
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + dur);
+
+      let done = false;
+      const tick = () => {
+        if (stopFlag && !done) { done = true; resolve(); return; }
+        if (!done) requestAnimationFrame(tick);
+      };
+      osc.onended = () => {
+        if (!done) { done = true; resolve(); }
+      };
+      tick();
+    });
+  }
+
+  async function togglePlay() {
+    if (isPlaying) {
+      stopFlag = true;
+      return;
+    }
+    const seq = buildSequence();
+    if (seq.length === 0) return;
+
+    isPlaying = true;
+    stopFlag = false;
+    const btn = document.getElementById('playBtn');
+    const icon = document.getElementById('playIcon');
+    const label = document.getElementById('playLabel');
+    btn.classList.add('playing');
+    icon.textContent = '■';
+    label.textContent = '停止';
+
+    await playSequence(seq);
+
+    isPlaying = false;
+    stopFlag = false;
+    btn.classList.remove('playing');
+    icon.textContent = '▶';
+    label.textContent = '音を鳴らす';
+  }
+
+  function copyCommand() {
+    const cmd = getPlainCommand();
+    if (!cmd) return;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.querySelector('span').textContent = '✓ コピー済';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.querySelector('span').textContent = 'コピー';
+      }, 2000);
+    });
+  }
+
+  function syncGapDisabled() {
+    const checked = document.getElementById('disableGap').checked;
+    const gapInput = document.getElementById('gapMs');
+    const optGroup = gapInput.closest('.option-group');
+    gapInput.disabled = checked;
+    optGroup.classList.toggle('disabled', checked);
+  }
+
+  // Watch gap/checkbox changes
+  document.getElementById('gapMs').addEventListener('input', updatePreview);
+  document.getElementById('disableGap').addEventListener('change', () => {
+    syncGapDisabled();
+    updatePreview();
+  });
+
+  function saveState() {
+    localStorage.setItem('beepsim', JSON.stringify({
+      rows: rows.map(r => ({ hz: r.hz, ms: r.ms })),
+      gapMs: document.getElementById('gapMs').value,
+      disableGap: document.getElementById('disableGap').checked,
+      tab: currentTab,
+    }));
+  }
+
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('beepsim'));
+      if (!saved) return false;
+      if (saved.gapMs !== undefined) document.getElementById('gapMs').value = saved.gapMs;
+      if (saved.disableGap !== undefined) document.getElementById('disableGap').checked = saved.disableGap;
+      if (saved.tab && TAB_HINTS.hasOwnProperty(saved.tab)) switchTab(saved.tab);
+      if (saved.rows && saved.rows.length > 0) {
+        saved.rows.forEach(r => addRow(r.hz, r.ms));
+        return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  function resetRows() {
+    if (rows.length === 0) return;
+    rows = [];
+    rowId = 0;
+    renderRows();
+    updatePreview();
+  }
+
+  function parseCommand(text) {
+    if (!text) return { error: 'コマンドが空です' };
+
+    let format;
+    if (/\[console\]::beep/i.test(text) || /Start-Sleep\s+-Milliseconds/i.test(text)) {
+      format = 'ps';
+    } else if (/play\s+-n\s+synth/i.test(text)) {
+      format = 'mac';
+    } else if (/beep\s+-[fl]/i.test(text)) {
+      format = 'linux';
+    } else {
+      return { error: 'フォーマットを認識できません（PS / macOS / Linux のコマンドを貼り付けてください）' };
+    }
+
+    const tokens = text.split(/[;\n]+/).map(t => t.trim()).filter(Boolean);
+    const result = [];
+
+    for (const token of tokens) {
+      if (format === 'ps') {
+        const beepMatch = token.match(/^\[console\]::beep\(\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+        if (beepMatch) {
+          const hz = parseInt(beepMatch[1]);
+          const ms = parseInt(beepMatch[2]);
+          if (hz < 37 || hz > 32767) return { error: `周波数は 37〜32767 の整数である必要があります（${hz}）` };
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: String(hz), ms: String(ms) });
+          continue;
+        }
+        const sleepMatch = token.match(/^Start-Sleep\s+-Milliseconds\s+(\d+)$/i);
+        if (sleepMatch) {
+          const ms = parseInt(sleepMatch[1]);
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: '', ms: String(ms) });
+          continue;
+        }
+        return { error: `認識できないトークン: ${token}` };
+      }
+
+      if (format === 'mac') {
+        const playMatch = token.match(/^play\s+-n\s+synth\s+([\d.]+)\s+square\s+([\d.]+)$/i);
+        if (playMatch) {
+          const ms = Math.round(parseFloat(playMatch[1]) * 1000);
+          const hz = Math.round(parseFloat(playMatch[2]));
+          if (hz < 37 || hz > 32767) return { error: `周波数は 37〜32767 の整数である必要があります（${hz}）` };
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: String(hz), ms: String(ms) });
+          continue;
+        }
+        const sleepMatch = token.match(/^sleep\s+([\d.]+)$/i);
+        if (sleepMatch) {
+          const ms = Math.round(parseFloat(sleepMatch[1]) * 1000);
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: '', ms: String(ms) });
+          continue;
+        }
+        return { error: `認識できないトークン: ${token}` };
+      }
+
+      if (format === 'linux') {
+        const beepFLMatch = token.match(/^beep\s+-f\s+([\d.]+)\s+-l\s+(\d+)$/i);
+        if (beepFLMatch) {
+          const hz = Math.round(parseFloat(beepFLMatch[1]));
+          const ms = parseInt(beepFLMatch[2]);
+          if (hz < 37 || hz > 32767) return { error: `周波数は 37〜32767 の整数である必要があります（${hz}）` };
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: String(hz), ms: String(ms) });
+          continue;
+        }
+        const beepLFMatch = token.match(/^beep\s+-l\s+(\d+)\s+-f\s+([\d.]+)$/i);
+        if (beepLFMatch) {
+          const ms = parseInt(beepLFMatch[1]);
+          const hz = Math.round(parseFloat(beepLFMatch[2]));
+          if (hz < 37 || hz > 32767) return { error: `周波数は 37〜32767 の整数である必要があります（${hz}）` };
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: String(hz), ms: String(ms) });
+          continue;
+        }
+        const sleepMatch = token.match(/^sleep\s+([\d.]+)$/i);
+        if (sleepMatch) {
+          const ms = Math.round(parseFloat(sleepMatch[1]) * 1000);
+          if (ms < 1) return { error: `長さは 1ms 以上の整数である必要があります（${ms}）` };
+          result.push({ hz: '', ms: String(ms) });
+          continue;
+        }
+        return { error: `認識できないトークン: ${token}` };
+      }
+    }
+
+    if (result.length === 0) return { error: '読み込める行がありません' };
+    return { rows: result };
+  }
+
+  document.getElementById('importBtn').addEventListener('click', () => {
+    const text = document.getElementById('import-input').value.trim();
+    const errorEl = document.getElementById('importError');
+    const result = parseCommand(text);
+    if (result.error) {
+      errorEl.textContent = result.error;
+      return;
+    }
+    errorEl.textContent = '';
+    rows = result.rows.map(r => ({ id: rowId++, hz: r.hz, ms: r.ms }));
+    lastFocusedRowId = null;
+    renderRows();
+    updatePreview();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    // Ctrl+Enter → 再生/停止
+    if (e.key === 'Enter' && e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      togglePlay();
+      return;
+    }
+    // Alt+N → 行追加
+    if (e.key === 'n' && e.altKey) {
+      e.preventDefault();
+      addRow();
+      // 追加した行のHz inputにフォーカス
+      const allRows = document.querySelectorAll('.beep-row');
+      const lastRow = allRows[allRows.length - 1];
+      if (lastRow) lastRow.querySelector('.freq-input').focus();
+      return;
+    }
+    // Alt+Delete → フォーカス中の行を削除
+    if (e.key === 'Delete' && e.altKey) {
+      e.preventDefault();
+      const rowEl = e.target.closest('.beep-row');
+      if (rowEl) {
+        const id = parseInt(rowEl.dataset.rowId, 10);
+        // 削除後フォーカスを隣の行へ移動
+        const allRows = [...document.querySelectorAll('.beep-row')];
+        const idx = allRows.indexOf(rowEl);
+        removeRow(id);
+        const newRows = document.querySelectorAll('.beep-row');
+        const focusTarget = newRows[Math.min(idx, newRows.length - 1)];
+        if (focusTarget) focusTarget.querySelector('.freq-input').focus();
+      }
+      return;
+    }
+  });
+
+  // Auto-save on any change
+  const _updatePreview = updatePreview;
+  updatePreview = function() { _updatePreview(); saveState(); };
+  document.getElementById('gapMs').addEventListener('input', saveState);
+  document.getElementById('disableGap').addEventListener('change', saveState);
+
+  const DEFAULT_ROWS = [
+    { hz: '587', ms: '200' },
+    { hz: '659', ms: '200' },
+    { hz: '523', ms: '200' },
+    { hz: '262', ms: '200' },
+    { hz: '392', ms: '200' },
+  ];
+
+  // Init: restore or default
+  const loaded = loadState();
+  const allSilent = rows.length > 0 && rows.every(r => !r.hz.trim());
+  if (!loaded || allSilent) {
+    rows = [];
+    rowId = 0;
+    DEFAULT_ROWS.forEach(r => addRow(r.hz, r.ms));
+  }
+  syncGapDisabled();
+</script>
+</body>
+</html>
