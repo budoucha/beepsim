@@ -30,7 +30,9 @@
     }
 
     body {
-      background: var(--bg);
+      background:
+        radial-gradient(ellipse 300px 200px at 50% -200px, rgba(240,165,0,0.06) 0%, transparent 70%),
+        var(--bg);
       color: var(--text);
       font-family: var(--sans);
       min-height: 100vh;
@@ -56,17 +58,20 @@
       z-index: 999;
     }
 
-    /* Ambient glow top */
+    /* Background image */
     body::before {
       content: '';
       position: fixed;
-      top: -200px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 400px;
-      background: radial-gradient(ellipse, rgba(240,165,0,0.06) 0%, transparent 70%);
+      bottom: calc(-0.25 * min(100vw, 80vh));
+      right: calc(-0.25 * min(100vw, 80vh));
+      width: min(100vw, 80vh);
+      height: min(100vw, 80vh);
+      background: url('bg.png') no-repeat center / contain;
+      opacity: 0.06;
       pointer-events: none;
+      z-index: 0;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
     }
 
     .container {
@@ -913,7 +918,7 @@
     <div class="btn-wrap">
       <button class="btn btn-play" id="playBtn" onclick="togglePlay()">
         <span id="playIcon">▶</span>
-        <span id="playLabel">音を鳴らす</span>
+        <span id="playLabel">再生</span>
       </button>
       <div class="tooltip">再生 / 停止<kbd>Ctrl+Enter</kbd></div>
     </div>
@@ -926,7 +931,7 @@
       <div class="tooltip">WAVファイルに書き出す</div>
     </div>
     <div class="btn-wrap">
-      <button class="btn btn-reset" onclick="resetRows()">✕ リセット</button>
+      <button class="btn btn-reset" onclick="resetRows()">✕ 全消去</button>
       <div class="tooltip">全消去</div>
     </div>
   </div>
@@ -1431,7 +1436,7 @@
     stopFlag = false;
     btn.classList.remove('playing');
     icon.textContent = '▶';
-    label.textContent = '音を鳴らす';
+    label.textContent = '再生';
   }
 
   function copyCommand() {
