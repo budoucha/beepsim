@@ -308,11 +308,17 @@
       color: var(--text-bright);
       font-family: var(--mono);
       font-size: 15px;
-      padding: 10px 14px;
+      padding: 0 14px;
+      height: 42px;
       outline: none;
       width: 100%;
       transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
       letter-spacing: 0.03em;
+    }
+
+    .row-input::-webkit-outer-spin-button,
+    .row-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
     }
 
     .row-input::placeholder {
